@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Units Tracker Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #f3f4f6;
+            --surface:   #ffffff;
+            --surface2:  #f9fafb;
+            --border:    #e5e7eb;
+            --border2:   #d1d5db;
+
+            --text:      #111827;
+            --text-2:    #4b5563;
+            --text-3:    #6b7280;
+
+            --green:     #059669;
+            --green-bg:  #d1fae5;
+            --yellow:    #d97706;
+            --yellow-bg: #fef3c7;
+            --red:       #dc2626;
+            --red-bg:    #fee2e2;
+            --blue:      #4f46e5;
+            --blue-bg:   #e0e7ff;
+            --blue-2:    #4338ca;
+
+            --font:  'Inter', sans-serif;
+            --mono:  'JetBrains Mono', monospace;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        /* ─── TOPNAV ─────────────────────────────────────────── */
+        .topnav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 52px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .topnav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .brand-dot {
+            width: 8px; height: 8px;
+            background: var(--blue);
+            border-radius: 50%;
+            box-shadow: 0 0 4px var(--blue);
+        }
+        .brand-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+        .brand-name span { color: var(--blue); }
+
+        .meter-tabs {
+            display: flex;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .meter-tab {
+            font-family: var(--font);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.35rem 1.1rem;
+            border: none;
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: all 0.15s;
+            width: auto;
+        }
+        .meter-tab:hover:not(.active) { color: var(--text); background: var(--border); }
+        .meter-tab.active {
+            background: var(--blue);
+            color: #fff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .topnav-brand-right {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            text-align: right;
+            line-height: 1.3;
+        }
+        .topnav-brand-right a {
+            color: var(--text-3);
+            text-decoration: none;
+        }
+        .topnav-brand-right a:hover { color: var(--text-2); }
+
+        /* ─── LAYOUT ─────────────────────────────────────────── */
+        .page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        @media (min-width: 1100px) {
+            .page { grid-template-columns: 1fr 300px; gap: 1.5rem; }
+        }
+
+        /* ─── SECTION LABEL ──────────────────────────────────── */
+        .section-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-3);
+            margin-bottom: 0.6rem;
+        }
+
+        /* ─── CARDS ──────────────────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+        }
+        .card-head {
+            padding: 0.85rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color: var(--text);
+        }
+        .card-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: var(--mono);
+        }
+        .card-body { padding: 1.25rem; }
+
+        /* ─── STATUS BAR ─────────────────────────────────────── */
+        .status-bar {
+            display: none;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-indicator {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .s-safe  { background: var(--green-bg); color: var(--green); border-bottom-color: rgba(16, 185, 129, 0.2); }
+        .s-safe  .status-indicator { background: var(--green); }
+        .s-warn  { background: var(--yellow-bg); color: var(--yellow); border-bottom-color: rgba(245, 158, 11, 0.2); }
+        .s-warn  .status-indicator { background: var(--yellow); }
+        .s-danger{ background: var(--red-bg); color: var(--red); border-bottom-color: rgba(239, 68, 68, 0.2); }
+        .s-danger .status-indicator { background: var(--red); animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+        /* ─── METRICS ROW ────────────────────────────────────── */
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+        }
+        @media (min-width: 600px) {
+            .metrics-strip { grid-template-columns: repeat(6, 1fr); }
+        }
+        .metric-cell {
+            padding: 1.25rem 1.1rem;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .metric-cell:last-child { border-right: none; }
+        @media (min-width: 600px) {
+            .metric-cell:nth-child(3) { border-right: 1px solid var(--border); }
+            .metric-cell:nth-child(n+4) { border-bottom: none; }
+            .metric-cell:last-child { border-right: none; }
+        }
+        @media (max-width: 599px) {
+            .metric-cell:nth-child(2n) { border-right: none; }
+            .metric-cell:nth-child(n+5) { border-bottom: none; }
+        }
+        .metric-lbl {
+            font-size: 0.67rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            color: var(--text-3);
+            margin-bottom: 0.4rem;
+        }
+        .metric-val {
+            font-family: var(--mono);
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+        .metric-sub {
+            font-size: 0.7rem;
+            color: var(--text-3);
+            margin-top: 0.3rem;
+            font-weight: 500;
+        }
+        .c-green { color: var(--green); }
+        .c-yellow { color: var(--yellow); }
+        .c-red { color: var(--red); }
+        .c-blue { color: var(--blue-2); }
+
+        /* ─── CHART ──────────────────────────────────────────── */
+        .chart-wrap {
+            padding: 1.5rem 1.25rem 1.5rem;
+            height: 250px;
+            position: relative;
+        }
+        .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+        /* ─── TABLE ──────────────────────────────────────────── */
+        .tbl-wrap {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: var(--surface2);
+            color: var(--text-3);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.7rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
+        }
+        tbody tr:hover { background: var(--surface2); }
+        tbody tr:last-child { border-bottom: none; }
+        tbody td {
+            padding: 0.8rem 1rem;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .td-date {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .td-time {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-3);
+            font-family: var(--mono);
+        }
+        .td-mono {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+        }
+        .td-added {
+            font-family: var(--mono);
+            color: var(--text-2);
+            font-weight: 500;
+        }
+        .td-cum {
+            font-family: var(--mono);
+            font-weight: 700;
+            color: var(--blue-2);
+        }
+        .tbl-empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-3);
+            font-size: 0.85rem;
+        }
+
+        /* ─── ACTION BUTTONS (table) ─────────────────────────── */
+        .row-actions { display: flex; gap: 0.3rem; }
+        .btn-icon {
+            width: 28px; height: 28px;
+            border: 1px solid var(--border2);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-3);
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0;
+            transition: all 0.15s;
+        }
+        .btn-icon:hover.edit { border-color: var(--blue); color: var(--blue-2); background: var(--blue-bg); }
+        .btn-icon:hover.del  { border-color: var(--red);  color: var(--red);    background: var(--red-bg); }
+
+        /* ─── SIDEBAR FORMS ──────────────────────────────────── */
+        .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        .form-row { display: flex; gap: 0.75rem; }
+        .form-row > * { flex: 1; min-width: 0; }
+
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-3);
+        }
+        .form-input {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.9rem;
+            width: 100%;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            -webkit-appearance: none;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px var(--blue-bg);
+        }
+        .form-input::placeholder { color: var(--text-3); }
+
+        /* ─── BUTTONS ────────────────────────────────────────── */
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: var(--font);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+            letter-spacing: 0.02em;
+            text-align: center;
+        }
+        .btn-primary {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .btn-primary:hover { background: var(--blue-2); }
+        .btn-ghost {
+            background: var(--surface2);
+            color: var(--text-2);
+            border-color: var(--border2);
+        }
+        .btn-ghost:hover { border-color: var(--text-3); color: var(--text); background: var(--border); }
+        .btn-green {
+            background: var(--green);
+            color: white;
+            border-color: var(--green);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .btn-green:hover { background: #047857; }
+        .btn-sm { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+
+        .export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
+
+        input[type="file"].form-input {
+            padding: 0.45rem 0.6rem;
+            cursor: pointer;
+            color: var(--text-2);
+            font-size: 0.8rem;
+            background: var(--surface2);
+        }
+
+        /* ─── DIVIDER ────────────────────────────────────────── */
+        .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+        /* ─── LIVE CLOCK BADGE ───────────────────────────────── */
+        .live-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            background: var(--green-bg);
+            color: var(--green);
+            padding: 0.1rem 0.45rem;
+            border-radius: 20px;
+            letter-spacing: 0.06em;
+            vertical-align: middle;
+            margin-left: 0.4rem;
+        }
+
+        /* ─── ACCENT BORDER TOP ──────────────────────────────── */
+        .accent-blue  { border-top: 3px solid var(--blue); }
+
+        .main-col { display: flex; flex-direction: column; gap: 1.5rem; }
+    </style>
+</head>
+<body>
+
+<!-- ────────── TOP NAV ────────── -->
+<nav class="topnav">
+    <div class="topnav-brand">
+        <div class="brand-dot"></div>
+        <span class="brand-name">Units Tracker <span>Pro</span> <span style="font-size: 0.65rem; background: var(--surface2); color: var(--text-2); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid var(--border); margin-left: 0.4rem; vertical-align: middle; font-weight: 600; font-family: var(--mono);">Beta v19.8.2</span></span>
+    </div>
+
+    <div class="meter-tabs">
+        <button class="meter-tab active" data-meter="meter1">Self Meter</button>
+        <button class="meter-tab" data-meter="meter2">Malik Meter</button>
+    </div>
+
+    <div class="topnav-brand-right">
+        Naveed Ahmed<br>
+        <a href="mailto:iamnaveed.cs@gmail.com">iamnaveed.cs@gmail.com</a>
+    </div>
+</nav>
+
+<!-- ────────── PAGE ────────── -->
+<div class="page">
+
+    <!-- MAIN COLUMN -->
+    <div class="main-col">
+
+        <!-- Overview Card -->
+        <div>
+            <div class="section-label" id="sectionLabel">Overview · Self Meter</div>
+            <div class="card">
+                <!-- Status Bar -->
+                <div id="statusBanner" class="status-bar" style="display:none;">
+                    <div class="status-indicator"></div>
+                    <span id="statusText"></span>
+                </div>
+
+                <!-- Metrics Strip -->
+                <div class="metrics-strip">
+                    <div class="metric-cell">
+                        <div class="metric-lbl">Consumed</div>
+                        <div id="m-units" class="metric-val">—</div>
+                        <div class="metric-sub">units so far</div>
+                    </div>
+                    <div class="metric-cell" style="background: var(--blue-bg);">
+                        <div class="metric-lbl" style="color: var(--blue-2);">Projected</div>
+                        <div id="m-projected" class="metric-val c-blue">—</div>
+                        <div class="metric-sub" style="color: var(--blue-2);">month-end estimate</div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-lbl">Elapsed</div>
+                        <div id="m-elapsed" class="metric-val">—</div>
+                        <div class="metric-sub">days</div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-lbl">Remaining</div>
+                        <div id="m-remaining" class="metric-val">—</div>
+                        <div class="metric-sub">days left</div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-lbl">Burn Rate</div>
+                        <div id="m-actual-burn" class="metric-val">—</div>
+                        <div class="metric-sub">units / day actual</div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-lbl">Safe Rate</div>
+                        <div id="m-safe-burn" class="metric-val">—</div>
+                        <div class="metric-sub">units / day allowed</div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="chart-wrap">
+                    <canvas id="consumptionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reading History Card -->
+        <div>
+            <div class="section-label">Reading Logs</div>
+            <div class="card">
+                <div class="card-head">
+                    <span class="card-title">Timestamped Reading History</span>
+                    <span id="logCount" class="card-badge" style="background:var(--surface2);color:var(--text-3);border:1px solid var(--border);">0 entries</span>
+                </div>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Meter Reading</th>
+                                <th>Units Added</th>
+                                <th>Cumulative Total</th>
+                                <th>% of Limit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr><td colspan="7" class="tbl-empty">No readings logged yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /main-col -->
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+        <!-- Log Reading -->
+        <div>
+            <div class="section-label">Log Reading</div>
+            <div class="card accent-blue">
+                <div class="card-body" style="display:flex;flex-direction:column;gap:1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Meter Reading Value</label>
+                        <input class="form-input" type="number" id="currentReading" step="0.1" placeholder="e.g. 1245.5" style="font-family:var(--mono);font-size:1.1rem;font-weight:700;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="display:flex;align-items:center;">Date &amp; Time <span class="live-badge">LIVE</span></label>
+                        <input class="form-input" type="datetime-local" id="readingTime">
+                    </div>
+                    <button class="btn btn-primary" id="logReadingBtn">Submit Reading</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cycle Config -->
+        <div>
+            <div class="section-label">Cycle Config</div>
+            <div class="card">
+                <div class="card-body" style="display:flex;flex-direction:column;gap:1rem;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Date</label>
+                            <input class="form-input" type="date" id="cycleStart">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date</label>
+                            <input class="form-input" type="date" id="cycleEnd">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Start Meter Reading</label>
+                        <input class="form-input" type="number" id="startReading" step="0.1" placeholder="Baseline reading">
+                    </div>
+                    <button class="btn btn-ghost" id="saveConfigBtn">Save Configuration</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export & Import -->
+        <div>
+            <div class="section-label">Export / Import</div>
+            <div class="card">
+                <div class="card-body" style="display:flex;flex-direction:column;gap:1rem;">
+                    <button class="btn btn-green" id="exportExcelBtn">Export Excel (Multi-Tab)</button>
+                    <div class="export-grid">
+                        <button class="btn btn-ghost btn-sm" id="exportHtmlBtn">Print HTML</button>
+                        <button class="btn btn-ghost btn-sm" id="exportJsonBtn">Export JSON</button>
+                    </div>
+                    <hr class="divider">
+                    <div class="form-group">
+                        <label class="form-label">Import JSON Database</label>
+                        <input class="form-input" type="file" id="importFile" accept=".json">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /sidebar -->
+</div><!-- /page -->
+
+<script>
+    const MAX_UNITS = 200;
+
+    let currentMeter = 'meter1';
+    let chartInstance  = null;
+    let isTimeFocused  = false;
+
+    const METERS = {
+        meter1: 'Self Meter',
+        meter2: 'Malik Meter'
+    };
+
+    const defaultState = () => ({ cycleStart: '', cycleEnd: '', startReading: null, logs: [] });
+    let state = defaultState();
+
+    const $ = id => document.getElementById(id);
+
+    const DOM = {
+        meterTabs:    document.querySelectorAll('.meter-tab'),
+        sectionLabel: $('sectionLabel'),
+
+        cycleStart:   $('cycleStart'),
+        cycleEnd:     $('cycleEnd'),
+        startReading: $('startReading'),
+        saveConfigBtn:$('saveConfigBtn'),
+
+        currentReading: $('currentReading'),
+        readingTime:    $('readingTime'),
+        logReadingBtn:  $('logReadingBtn'),
+
+        statusBanner:   $('statusBanner'),
+        statusText:     $('statusText'),
+
+        mUnits:      $('m-units'),
+        mProjected:  $('m-projected'),
+        mElapsed:    $('m-elapsed'),
+        mRemaining:  $('m-remaining'),
+        mActualBurn: $('m-actual-burn'),
+        mSafeBurn:   $('m-safe-burn'),
+
+        logsTableBody: $('logsTableBody'),
+        logCount:      $('logCount'),
+
+        exportJsonBtn:  $('exportJsonBtn'),
+        exportExcelBtn: $('exportExcelBtn'),
+        exportHtmlBtn:  $('exportHtmlBtn'),
+        importFile:     $('importFile'),
+    };
+
+    /* ─── INIT ─────────────────────────────────────── */
+    function init() {
+        DOM.meterTabs.forEach(t => t.addEventListener('click', e => switchMeter(e.target.dataset.meter)));
+        DOM.readingTime.addEventListener('focus', () => isTimeFocused = true);
+        DOM.readingTime.addEventListener('blur',  () => isTimeFocused = false);
+        setInterval(updateClock, 5000);
+        updateClock();
+        loadState(currentMeter);
+    }
+
+    function updateClock() {
+        if (isTimeFocused) return;
+        // Fix for precise local timezone time formatting for datetime-local input
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
+        DOM.readingTime.value = localISOTime;
+    }
+
+    /* ─── STATE ────────────────────────────────────── */
+    function switchMeter(id) {
+        if (id === currentMeter) return;
+        DOM.meterTabs.forEach(t => t.classList.toggle('active', t.dataset.meter === id));
+        currentMeter = id;
+        loadState(id);
+    }
+
+    function loadState(id) {
+        const raw = localStorage.getItem(`unitsTrackerState_${id}`);
+        if (raw) {
+            try { state = JSON.parse(raw); } catch { state = defaultState(); }
+        } else {
+            // legacy migration
+            const old = localStorage.getItem('unitsTrackerState');
+            if (id === 'meter1' && old) {
+                try { state = JSON.parse(old); localStorage.removeItem('unitsTrackerState'); saveRaw(); }
+                catch { state = defaultState(); }
+            } else {
+                state = defaultState();
+            }
+        }
+        DOM.sectionLabel.textContent = `Overview · ${METERS[id]}`;
+        populateForm();
+        updateUI();
+    }
+
+    function saveRaw() {
+        localStorage.setItem(`unitsTrackerState_${currentMeter}`, JSON.stringify(state));
+    }
+
+    function save() { saveRaw(); updateUI(); }
+
+    function populateForm() {
+        DOM.cycleStart.value   = state.cycleStart || '';
+        DOM.cycleEnd.value     = state.cycleEnd   || '';
+        DOM.startReading.value = state.startReading !== null ? state.startReading : '';
+        DOM.currentReading.value = '';
+    }
+
+    /* ─── EVENT HANDLERS ───────────────────────────── */
+    DOM.saveConfigBtn.addEventListener('click', () => {
+        state.cycleStart   = DOM.cycleStart.value;
+        state.cycleEnd     = DOM.cycleEnd.value;
+        const v = parseFloat(DOM.startReading.value);
+        state.startReading = isNaN(v) ? null : v;
+        save();
+    });
+
+    DOM.logReadingBtn.addEventListener('click', () => {
+        const reading = parseFloat(DOM.currentReading.value);
+        const timeStr  = DOM.readingTime.value;
+        if (isNaN(reading) || !timeStr) { alert('Enter a valid reading and time.'); return; }
+
+        state.logs.push({ timestamp: new Date(timeStr).toISOString(), reading });
+        state.logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        save();
+        DOM.currentReading.value = '';
+        updateClock();
+    });
+
+    /* ─── EDIT / DELETE ────────────────────────────── */
+    function editLog(idx) {
+        const log = state.logs[idx];
+        const val = prompt(`Edit reading (${new Date(log.timestamp).toLocaleString()}):`, log.reading);
+        if (val === null || val.trim() === '') return;
+        const n = parseFloat(val);
+        if (isNaN(n)) { alert('Invalid number.'); return; }
+        state.logs[idx].reading = n;
+        save();
+    }
+
+    function deleteLog(idx) {
+        if (!confirm('Delete this reading?')) return;
+        state.logs.splice(idx, 1);
+        save();
+    }
+
+    /* ─── UI UPDATE ────────────────────────────────── */
+    function updateUI() { renderTable(); calcMetrics(); renderChart(); }
+
+    /* ─── TABLE ────────────────────────────────────── */
+    function renderTable() {
+        const tbody = DOM.logsTableBody;
+        tbody.innerHTML = '';
+
+        if (!state.logs.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="tbl-empty">No readings logged yet. Enter your first meter reading →</td></tr>`;
+            DOM.logCount.textContent = '0 entries';
+            return;
+        }
+
+        DOM.logCount.textContent = `${state.logs.length} entr${state.logs.length === 1 ? 'y' : 'ies'}`;
+
+        let prev = state.startReading ?? 0;
+        const rows = state.logs.map((log, i) => {
+            const diff = log.reading - prev;
+            const cum  = log.reading - (state.startReading ?? 0);
+            prev = log.reading;
+            return { ...log, diff, cum, i };
+        });
+
+        [...rows].reverse().forEach((row, displayIdx) => {
+            const d   = new Date(row.timestamp);
+            const pct = ((row.cum / MAX_UNITS) * 100).toFixed(1);
+            const pctColor = row.cum > MAX_UNITS ? 'c-red' : row.cum > MAX_UNITS * 0.9 ? 'c-yellow' : '';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="td-mono" style="color:var(--text-3);">${rows.length - displayIdx}</td>
+                <td>
+                    <span class="td-date">${d.toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})}</span>
+                    <span class="td-time">${d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                </td>
+                <td class="td-mono" style="font-weight:700;">${row.reading}</td>
+                <td class="td-added">+${row.diff.toFixed(2)}</td>
+                <td class="td-cum">${row.cum.toFixed(2)}</td>
+                <td class="td-mono ${pctColor}">${pct}%</td>
+                <td>
+                    <div class="row-actions">
+                        <button class="btn-icon edit" title="Edit" onclick="editLog(${row.i})">✎</button>
+                        <button class="btn-icon del"  title="Delete" onclick="deleteLog(${row.i})">✕</button>
+                    </div>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    /* ─── METRICS ──────────────────────────────────── */
+    function calcMetrics() {
+        if (!state.cycleStart || !state.cycleEnd || state.startReading === null || !state.logs.length) {
+            resetMetrics(); return;
+        }
+
+        const MS  = 864e5; // ms per day
+        const t0  = new Date(state.cycleStart + 'T00:00:00').getTime();
+        const t1  = new Date(state.cycleEnd   + 'T23:59:59').getTime();
+        const lat = state.logs[state.logs.length - 1];
+        const tN  = new Date(lat.timestamp).getTime();
+
+        const consumed  = lat.reading - state.startReading;
+        const elapsed   = Math.max(0, tN - t0) / MS;
+        const remaining = Math.max(0, t1 - tN) / MS;
+        const burnRate  = elapsed > 0 ? consumed / elapsed : 0;
+        const safeRate  = remaining > 0 ? (MAX_UNITS - consumed) / remaining : 0;
+        const projected = consumed + burnRate * remaining;
+
+        DOM.mUnits.textContent      = consumed.toFixed(1);
+        DOM.mElapsed.textContent    = elapsed.toFixed(1);
+        DOM.mRemaining.textContent  = remaining.toFixed(1);
+        DOM.mActualBurn.textContent = burnRate.toFixed(2);
+        DOM.mSafeBurn.textContent   = safeRate.toFixed(2);
+        DOM.mProjected.textContent  = projected.toFixed(0);
+
+        // Status
+        const sb = DOM.statusBanner;
+        sb.className  = 'status-bar';
+        DOM.mProjected.className = 'metric-val';
+
+        if (projected > MAX_UNITS) {
+            sb.classList.add('s-danger');
+            DOM.statusText.textContent = `CRITICAL — Projected ${projected.toFixed(0)} units will exceed the 200-unit limit. Reduce daily usage immediately.`;
+            DOM.mProjected.classList.add('c-red');
+        } else if (projected > MAX_UNITS * 0.9) {
+            sb.classList.add('s-warn');
+            DOM.statusText.textContent = `WARNING — Projected ${projected.toFixed(0)} units approaching limit. Trim usage to stay safe.`;
+            DOM.mProjected.classList.add('c-yellow');
+        } else {
+            sb.classList.add('s-safe');
+            DOM.statusText.textContent = `ON TRACK — Projected ${projected.toFixed(0)} units. Consumption is safely within the 200-unit limit.`;
+            DOM.mProjected.classList.add('c-green');
+        }
+        sb.style.display = 'flex';
+    }
+
+    function resetMetrics() {
+        ['m-units','m-projected','m-elapsed','m-remaining','m-actual-burn','m-safe-burn']
+            .forEach(id => $(id).textContent = '—');
+        DOM.statusBanner.style.display = 'none';
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    }
+
+    /* ─── CHART ────────────────────────────────────── */
+    function renderChart() {
+        const canvas = $('consumptionChart');
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+        if (!state.cycleStart || state.startReading === null) return;
+
+        const labels = [new Date(state.cycleStart + 'T00:00:00').toLocaleDateString(undefined, {month: 'short', day: 'numeric'})];
+        const data   = [0];
+
+        state.logs.forEach(l => {
+            labels.push(new Date(l.timestamp).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}));
+            data.push(l.reading - state.startReading);
+        });
+
+        chartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Cumulative Units',
+                        data,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.2,
+                        pointBackgroundColor: '#4f46e5',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    },
+                    {
+                        label: 'Max Limit (200)',
+                        data: Array(labels.length).fill(MAX_UNITS),
+                        borderColor: '#dc2626',
+                        borderWidth: 1.5,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
+                        ticks: { color: '#6b7280', font: { size: 11, family: "'Inter'" } },
+                        border: { display: false }
+                    },
+                    y: {
+                        min: 0,
+                        suggestedMax: MAX_UNITS + 20,
+                        grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
+                        ticks: { color: '#6b7280', font: { size: 11, family: "'Inter'" } },
+                        border: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#4b5563', font: { size: 12, family: "'Inter'", weight: '600' }, boxWidth: 12, boxHeight: 12 }
+                    },
+                    tooltip: {
+                        backgroundColor: '#ffffff',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        titleColor: '#111827',
+                        bodyColor: '#4b5563',
+                        titleFont: { family: "'Inter'", size: 13, weight: '700' },
+                        bodyFont: { family: "'JetBrains Mono'", size: 13 },
+                        padding: 10,
+                        cornerRadius: 6,
+                        boxPadding: 4
+                    }
+                },
+                interaction: { mode: 'nearest', axis: 'x', intersect: false }
+            }
+        });
+    }
+
+    /* ─── EXPORT HTML ──────────────────────────────── */
+    DOM.exportHtmlBtn.addEventListener('click', () => {
+        const now = new Date().toLocaleString();
+        let html = `<!DOCTYPE html><html><head><title>Units Report</title></head><body>
+<pre style="font-family:Courier New, monospace; max-width:800px; margin:20px auto; line-height:1.6; color:#000;">
+================================================================================
+                  ENTERPRISE ELECTRICITY UNITS REPORT
+================================================================================
+Generated  : ${now}
+Prepared by: Naveed Ahmed  /  iamnaveed.cs@gmail.com
+================================================================================
+
+`;
+        const meters = [{id:'meter1',name:'Self Meter'},{id:'meter2',name:'Malik Meter'}];
+
+        meters.forEach(m => {
+            let s = m.id === currentMeter ? state : (() => {
+                const raw = localStorage.getItem(`unitsTrackerState_${m.id}`);
+                try { return raw ? JSON.parse(raw) : defaultState(); } catch { return defaultState(); }
+            })();
+
+            const consumed = s.logs.length && s.startReading !== null
+                ? s.logs[s.logs.length-1].reading - s.startReading : 0;
+
+            html += `--------------------------------------------------------------------------------
+METER       : ${m.name}
+Cycle Start : ${s.cycleStart || 'Not Set'}
+Cycle End   : ${s.cycleEnd   || 'Not Set'}
+Start Read  : ${s.startReading !== null ? s.startReading : 'Not Set'}
+Total Used  : ${consumed.toFixed(2)} units
+--------------------------------------------------------------------------------
+
+  #    DATE              TIME          READING      ADDED      CUMULATIVE
+  ─    ────              ────          ───────      ─────      ──────────
+`;
+            if (!s.logs.length) {
+                html += '  (no records)\n';
+            } else {
+                let prev = s.startReading ?? 0;
+                s.logs.forEach((l, i) => {
+                    const d   = new Date(l.timestamp);
+                    const diff = l.reading - prev;
+                    const cum  = l.reading - (s.startReading ?? 0);
+                    const row = [
+                        String(i+1).padStart(3),
+                        d.toLocaleDateString().padEnd(17),
+                        d.toLocaleTimeString().padEnd(13),
+                        String(l.reading).padEnd(12),
+                        ('+'+diff.toFixed(2)).padEnd(10),
+                        cum.toFixed(2)
+                    ];
+                    html += '  ' + row.join(' ') + '\n';
+                    prev = l.reading;
+                });
+            }
+            html += '\n';
+        });
+
+        html += `================================================================================
+                           END OF REPORT
+================================================================================
+</pre></body></html>`;
+
+        const url = URL.createObjectURL(new Blob([html], {type:'text/html;charset=utf-8;'}));
+        triggerDl(url, `Units_Enterprise_Report_${new Date().toISOString().slice(0,10)}.html`);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    });
+
+    /* ─── EXPORT JSON ──────────────────────────────── */
+    DOM.exportJsonBtn.addEventListener('click', () => {
+        triggerDl(
+            'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state, null, 2)),
+            `units_${currentMeter}_${new Date().toISOString().slice(0,10)}.json`
+        );
+    });
+
+    /* ─── EXPORT EXCEL ─────────────────────────────── */
+    DOM.exportExcelBtn.addEventListener('click', () => {
+        if (typeof XLSX === 'undefined') { alert('Spreadsheet library loading… please retry in a moment.'); return; }
+        const wb   = XLSX.utils.book_new();
+        const now  = new Date().toLocaleString();
+
+        [{id:'meter1',name:'Self Meter'},{id:'meter2',name:'Malik Meter'}].forEach(m => {
+            let s = m.id === currentMeter ? state : (() => {
+                const raw = localStorage.getItem(`unitsTrackerState_${m.id}`);
+                try { return raw ? JSON.parse(raw) : defaultState(); } catch { return defaultState(); }
+            })();
+
+            const consumed = s.logs.length && s.startReading !== null
+                ? s.logs[s.logs.length-1].reading - s.startReading : 0;
+
+            const aoa = [
+                ['Field','Value'],
+                ['Report Generated', now],
+                ['Meter Name', m.name],
+                ['Cycle Start', s.cycleStart || 'Not Set'],
+                ['Cycle End',   s.cycleEnd   || 'Not Set'],
+                ['Start Reading', s.startReading !== null ? s.startReading : 'Not Set'],
+                ['Total Consumed', consumed],
+                [],
+                ['#','Date','Time','Reading Value','Units Added','Cumulative Total']
+            ];
+
+            let prev = s.startReading ?? 0;
+            s.logs.forEach((l, i) => {
+                const d = new Date(l.timestamp);
+                const diff = l.reading - prev;
+                const cum  = l.reading - (s.startReading ?? 0);
+                aoa.push([i+1, d.toLocaleDateString(), d.toLocaleTimeString(), l.reading, diff, cum]);
+                prev = l.reading;
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{wch:4},{wch:16},{wch:13},{wch:14},{wch:14},{wch:16}];
+            XLSX.utils.book_append_sheet(wb, ws, m.name);
+        });
+
+        XLSX.writeFile(wb, `Units_Pro_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+    });
+
+    /* ─── IMPORT ───────────────────────────────────── */
+    DOM.importFile.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const d = JSON.parse(ev.target.result);
+                if (d && typeof d === 'object') { state = d; save(); populateForm(); alert(`Data successfully imported to ${METERS[currentMeter]}!`); }
+            } catch { alert('Error: Invalid JSON file.'); }
+            e.target.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    function triggerDl(href, name) {
+        const a = document.createElement('a');
+        a.href = href; a.download = name;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    init();
+</script>
+</body>
+</html>
